@@ -2,7 +2,7 @@
 Trying out sparsey while reading the source code
 */
 
-use std::io::{prelude::*, stdout};
+use std::io::stdout;
 
 use crossterm::{
     event::{self, *},
@@ -21,16 +21,19 @@ fn init() -> crossterm::Result<()> {
 
 fn setup() -> (Dispatcher, World) {
     let dispatcher = Dispatcher::builder()
+        .add_system(read_sparsey::on_event.system())
         .add_system(read_sparsey::render.system())
         .build();
 
     let layout = Layout::builder()
-        .add_group(<(Actor, Pos, Img)>::group())
+        .add_group(<(Actor, Body, Img)>::group())
+        .add_group(<(Player, Actor, Body, Img)>::group())
         .build();
-
     let mut world = World::with_layout(&layout);
     dispatcher.register_storages(&mut world);
+
     world.insert_resource(RenderBuffer::default());
+    world.insert_resource(TerminalEvent::default());
 
     world.insert_resource({
         let mut map = Map {
@@ -43,9 +46,33 @@ fn setup() -> (Dispatcher, World) {
         map
     });
 
-    world.create_entity((Actor { hp: 10 }, Pos(Vec2 { x: 2, y: 2 }), Img('@')));
-    world.create_entity((Actor { hp: 10 }, Pos(Vec2 { x: 3, y: 3 }), Img('D')));
-    world.create_entity((Actor { hp: 10 }, Pos(Vec2 { x: 4, y: 4 }), Img('D')));
+    world.create_entity((
+        Player,
+        Actor { hp: 10 },
+        Body {
+            pos: Vec2 { x: 2, y: 2 },
+            is_block: true,
+        },
+        Img('@'),
+    ));
+
+    world.create_entity((
+        Actor { hp: 10 },
+        Body {
+            pos: Vec2 { x: 3, y: 3 },
+            is_block: true,
+        },
+        Img('D'),
+    ));
+
+    world.create_entity((
+        Actor { hp: 10 },
+        Body {
+            pos: Vec2 { x: 4, y: 4 },
+            is_block: true,
+        },
+        Img('D'),
+    ));
 
     (dispatcher, world)
 }
@@ -54,37 +81,31 @@ fn main() -> SystemResult {
     self::init()?;
 
     let (mut dispatcher, mut world) = self::setup();
-    let mut init = false;
 
     // first tick
     dispatcher.run_seq(&mut world)?;
     world.increment_tick()?;
 
     loop {
-        world.increment_tick().unwrap();
-        match event::read()? {
+        // block while wating for the next event
+        let ev = event::read()?;
+
+        match ev {
             Event::Key(KeyEvent { code, modifiers }) => {
                 if code == KeyCode::Esc
                     || code == KeyCode::Char('c') && modifiers.contains(KeyModifiers::CONTROL)
                 {
                     break;
                 }
-
-                if init {
-                    continue;
-                }
-                init = true;
-
-                if let KeyCode::Char(c) = code {
-                    // TODO: go to direction
-                }
-
-                // tick
-                dispatcher.run_seq(&mut world)?;
-                world.increment_tick()?;
             }
             _ => {}
         }
+
+        assert!(world.insert_resource(TerminalEvent(Some(ev))).is_some());
+
+        // tick
+        dispatcher.run_seq(&mut world)?;
+        world.increment_tick()?;
     }
 
     Ok(())
