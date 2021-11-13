@@ -11,7 +11,7 @@ use crossterm::{
     terminal::{Clear, ClearType},
 };
 use sparsey::prelude::*;
-use vek::{Extent2, Rect, Vec2};
+use vek::{Aabr, Extent2, Vec2};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Tile {
@@ -135,10 +135,10 @@ pub fn on_event(
         };
 
         let pos = bs.include(&pl).iter().next().unwrap().pos;
-        let next_pos = (pos.as_::<i32>() + dir.to_vec()).as_::<u32>();
+        let next_pos = pos.as_::<i32>() + dir.to_vec();
 
         if !is_block(next_pos, &map, bs.iter()) {
-            (&mut bs).include(&pl).iter().next().unwrap().pos = next_pos;
+            (&mut bs).include(&pl).iter().next().unwrap().pos = next_pos.as_::<u32>();
         }
     }
 
@@ -191,15 +191,22 @@ pub fn render(
 }
 
 pub fn is_block<'b>(
-    pos: Vec2<u32>,
+    pos: Vec2<i32>,
     map: &Res<Map>,
     mut bs: impl Iterator<Item = &'b Body>,
 ) -> bool {
-    let bounds = vek::Rect::from(([0, 0].into(), map.size.as_::<u32>()));
+    let bounds = Aabr {
+        min: [0, 0].into(),
+        max: Vec2 {
+            x: map.size.w as i32 - 1,
+            y: map.size.h as i32 - 1,
+        },
+    };
 
     if !bounds.contains_point(pos) {
-        return false;
+        return true;
     }
 
+    let pos = pos.as_::<u32>();
     bs.any(|b| b.pos == pos && b.is_block)
 }
