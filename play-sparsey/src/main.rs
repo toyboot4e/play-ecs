@@ -82,11 +82,11 @@ fn main() -> SystemResult {
 
     let (mut dispatcher, mut world) = self::setup();
 
-    // first tick
-    dispatcher.run_seq(&mut world)?;
-    world.increment_tick()?;
-
     loop {
+        // tick
+        dispatcher.run_seq(&mut world)?;
+        world.increment_tick()?;
+
         // block while wating for the next event
         let ev = event::read()?;
 
@@ -102,10 +102,6 @@ fn main() -> SystemResult {
         }
 
         assert!(world.insert_resource(TerminalEvent(Some(ev))).is_some());
-
-        // tick
-        dispatcher.run_seq(&mut world)?;
-        world.increment_tick()?;
     }
 
     Ok(())

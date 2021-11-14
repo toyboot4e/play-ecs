@@ -13,6 +13,14 @@ use crossterm::{
 use sparsey::prelude::*;
 use vek::{Aabr, Extent2, Vec2};
 
+/// Resource type
+#[derive(Debug, Clone, Default)]
+pub struct TerminalEvent(pub Option<crossterm::event::Event>);
+
+/// Unique component that represents the only player entity
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct Player;
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Tile {
     Empty,
@@ -50,10 +58,6 @@ impl<T: Into<Vec2<u32>>> ops::IndexMut<T> for Map {
         &mut self.tiles[ix.x as usize + ix.y as usize * self.size[0] as usize]
     }
 }
-
-/// Unique tag that represents the only player entity
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Player;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Actor {
@@ -101,9 +105,6 @@ pub struct Img(pub char);
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct RenderBuffer(String);
 
-#[derive(Debug, Clone, Default)]
-pub struct TerminalEvent(pub Option<crossterm::event::Event>);
-
 pub fn on_event(
     ev: Res<TerminalEvent>,
     map: Res<Map>,
@@ -145,7 +146,6 @@ pub fn on_event(
     Ok(())
 }
 
-// TODO: render only when needed
 pub fn render(
     // mut cmd: Commands,
     mut buf: ResMut<RenderBuffer>,
@@ -208,5 +208,11 @@ pub fn is_block<'b>(
     }
 
     let pos = pos.as_::<u32>();
+    let tile = map[pos];
+
+    if tile == Tile::Wall {
+        return true;
+    }
+
     bs.any(|b| b.pos == pos && b.is_block)
 }
