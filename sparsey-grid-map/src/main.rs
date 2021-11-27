@@ -11,7 +11,7 @@ use crossterm::{
 use sparsey::*;
 use vek::Vec2;
 
-use play_sparsey::*;
+use sparsey_grid_map::*;
 
 fn init() -> crossterm::Result<()> {
     terminal::enable_raw_mode()?;
@@ -21,8 +21,8 @@ fn init() -> crossterm::Result<()> {
 
 fn setup() -> (Dispatcher, World) {
     let dispatcher = Dispatcher::builder()
-        .add_system(play_sparsey::on_event.system())
-        .add_system(play_sparsey::render.system())
+        .add_system(sparsey_grid_map::on_event.system())
+        .add_system(sparsey_grid_map::render.system())
         .build();
 
     let layout = Layout::builder()
